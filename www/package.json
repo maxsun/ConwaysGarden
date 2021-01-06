@@ -27,6 +27,7 @@
   },
   "homepage": "https://github.com/rustwasm/create-wasm-app#readme",
   "dependencies": {
+    "babel-loader": "^8.2.2",
     "wasm-game-of-life": "file:../pkg"
   },
   "devDependencies": {

@@ -1,101 +1,286 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <!-- <link rel="preconnect" href="https://fonts.gstatic.com"> -->
-    <!-- <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet"> -->
 
-    <meta charset="utf-8">
+<head>
+    <title>Conway's Garden</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="./all.min.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600&display=swap" rel="stylesheet">     <meta charset="utf-8">
     <title>Hello wasm-pack!</title>
     <style>
-        body, html {
+        body,
+        html {
             margin: 0;
             padding: 0;
             height: 100%;
             width: 100%;
+            color: 'black';
             display: flex;
             flex-direction: column;
+            flex-wrap: wrap;
+            margin: auto;
+            flex: 1;
+            font-family: serif;
+
+            --base00: red;
+            --base01: red;
+            --base02: red;
+            --base03: red;
+            --base04: red;
+            --base05: red;
+
+            background-color: var(--base00);
+            color: var(--base05);
         }
+
         h1 {
             font-size: 20px;
+            padding: 0;
+            margin: 0;
+            font-weight: 500;
+            font-family: 'Amiri', serif;
         }
-        #mainWindow {
-            color: 'black';
-            /* padding: 10px; */
-            /* min-width: 200px; */
-            /* max-width: 900px; */
+
+        #header {
             width: 100%;
-            /* height: 100%; */
+            display: flex;
+            justify-content: space-around;
+            padding-top: 5px;
+        }
+
+        #title {
+            flex: 1;
+            align-self: center;
+        }
+
+        #leftButtons {
+            padding-left: 10px;
+            width: 70px;
+            display: flex;
+            justify-content: space-around;
+        }
+
+        #rightButtons {
+            width: 70px;
+        }
+
+        #leftButtons button {
+            font-size: 14px;
+            background: none;
+            border: none;
+            color: inherit;
+            padding: 3px;
+            margin: 0;
+        }
+
+        #leftButtons button:hover {
+            cursor: pointer;
+        }
+
+        #content {
+            width: 100%;
+            height: 100%;
+            flex: 1;
+            display: flex;
+            flex-direction: row;
+            /* flex-wrap: nowrap; */
+            justify-content: space-around;
+        }
+
+        @media all and (max-width: 600px) {
+            #content {
+                flex-wrap: wrap;
+            }
+        }
+
+        #mainContent {
+            flex: 3 0 auto;
+            min-height: 250px;
+            text-align: center;
             display: flex;
             flex-direction: column;
-            /* padding: 20px; */
-            margin: auto;
-            /* background-color: blue; */
-            text-align: center;
-            flex: 1;
+            align-items: center;
         }
+
         #canvasContainer {
-            flex: 1;
-            /* display: flex; */
-            /* background-color: aqua; */
-            /* justify-content: space-around; */
-            /* padding: 20px; */
+            align-items: center;
+            flex: 1 1 auto;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            background-color: var(--base00);
+            flex-direction: row;
         }
+
         #canvas {
-            /* width: 100%; */
-            /* height: 100%; */
-            border: solid 1px #757780;
+            background-color: var(--base00);
+            border: solid 1px var(--base03);
+            position: absolute;
         }
-        .coord {
-            /* border-radius: 7px; */
-            padding: 3px;
-            display: inline-block;
-            background-color: #0077CC;
-            color: lightgray;
-            font-weight: lighter;
-            font-family: sans-serif;
+
+        #sidebar {
+            font-family: 'Open Sans', sans-serif;
+            min-width: 250px;
+            max-width: 400px;
+            text-align: left;
+            background-color: var(--base01);
+            color: var(--base05);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: scroll;
+            padding: 10px;
+            font-size: 14px;
+        }
+
+        .theme-popup {
+            display: none;
+            position: absolute;
+            border: solid 1px var(--base03);
+            color: var(--base04);
+            background-color: var(--base00);
+            z-index: 10;
+            max-height: 300px;
+            overflow: scroll;
+            list-style: none;
+            left: 20px;
+            top: 20px;
+            padding: 5px;
             font-size: 16px;
         }
+        .theme-popup li {
+            list-style: none;
+            padding-top: 5px;
+        }
+        .theme-popup button {
+            width: 100%;
+            text-align: left;
+        }
+        .theme-popup li:hover {
+            background-color: var(--base01);
+        }
+
+        .numeric-inc {
+            color: var(--base0B);
+        }
+        .numeric-dec {
+            color: var(--base08);
+        }
+
+        .coord {
+            /* border-radius: 7px; */
+            padding: 5px;
+            white-space: nowrap;
+            display: inline-block;
+            color: var(--base04);
+            font-weight: lighter;
+            font-size: 16px;
+        }
+
         .coord-text {
-            color: white;
+            line-break: none;
             font-family: monospace;
-            font-weight: normal;
+            font-weight: 300;
+            transition: 0.25s;
+        }
+
+        .patternList {
+            border: solid 1px var(--base03);
+            padding: 3px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+
+        .listEntry {
+            cursor: pointer;
+            padding: 3px;
+        }
+
+        .listEntry:hover {
+            /* filter: brightness(1.5); */
+            background-color: var(--base03);
+        }
+
+        .listEntry h3 {
+            font-size: 16px;
+            font-weight: 600;
+            padding: 0;
+            margin: 0;
+        }
+
+        table {
+            text-align: left;
+        }
+
+        td {
+            white-space: nowrap;
         }
     </style>
-  </head>
-  <body>
-    <noscript>This page contains webassembly and javascript content, please enable javascript in your browser.</noscript>
-    <div id="mainWindow">
-        <h1>Conway's Garden</h1>
-        <!-- <canvas id="canvas" width="200px" height="200px"></canvas> -->
-        <div id="canvasContainer">
-            <canvas id="canvas"></canvas>
-        </div>
-        <div>
-            <!-- <h3>Debug</h3> -->
-            <div>
-                <span>Mouse:
-                    <div class="coord">
-                        (<span class="coord-text" id="mouseX"></span>,
-                        <span class="coord-text" id="mouseY"></span>)
-                    </div>
-                </span>
-                <span>Window Loc:
-                    <div class="coord">
-                        (<span class="coord-text" id="windowX"></span>,
-                        <span class="coord-text" id="windowY"></span>)
-                    </div>
-                </span>
-            
-                <span>Window Dim:
-                    <div class="coord">
-                        (<span class="coord-text" id="windowHeight"></span>,
-                        <span class="coord-text" id="windowWidth"></span>)
-                    </div>
-                </span>
+</head>
+
+<body>
+    <noscript>This page contains webassembly and javascript content, please enable javascript in your
+        browser.</noscript>
+
+    <div id="content">
+        <div id="mainContent">
+            <div id="header">
+                <div id="leftButtons">
+                    <button id="sidebarToggle" value="Sidebar Toggle">
+                        <i class="fa fa-bars"></i> <!-- uses solid style -->
+                    </button>
+                    <button id="themeToggle" value="Theme Toggle">
+                        <i class="fa fa-palette"></i> <!-- uses solid style -->
+                    </button>
+                    <ul id="themePopup" class="theme-popup"></ul>
+                </div>
+                <div id="title">
+                    <h1>Conway's Garden</h1>
+                </div>
+                <div id="rightButtons"></div>
             </div>
-            <input type="file" id="file-input"/>
+            <div id="canvasContainer">
+                <canvas id="canvas"></canvas>
+            </div>
+        </div>
+        <!-- <h3>Debug</h3> -->
+        <div id="sidebar">
+            <table>
+                <tr>
+                    <td>Mouse:</td>
+                    <td>
+                        <div class="coord">
+                            (<span class="coord-text" id="mouseX"></span>,
+                            <span class="coord-text" id="mouseY"></span>)
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>View Pos:</td>
+                    <td>
+                        <div class="coord">
+                            (<span class="coord-text" id="windowX"></span>,
+                            <span class="coord-text" id="windowY"></span>)
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>View Shape:</td>
+                    <td>
+                        <div class="coord">
+                            (<span class="coord-text" id="windowHeight"></span>,
+                            <span class="coord-text" id="windowWidth"></span>)
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            <div id="patternList" class="patternList"></div>
+            <input type="file" id="file-input" />
         </div>
     </div>
     <script src="./bootstrap.js"></script>
-  </body>
+</body>
+
 </html>
