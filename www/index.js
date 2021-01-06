@@ -80,7 +80,7 @@ function initSidebar() {
         let listElem = document.createElement('div');
         listElem.className = 'listEntry';
 
-        let elemTitle = document.createElement('h3');
+        let elemTitle = document.createElement('span');
         elemTitle.innerText = pat.title;
         listElem.appendChild(elemTitle);
 
@@ -113,14 +113,15 @@ function initializeThemes(){
     const canvas = document.getElementById('canvas');
     // read text from URL location
     var request = new XMLHttpRequest();
-    request.open('GET', '/themes.json', true);
+    request.open('GET', 'https://conwaysgarden.s3-us-west-2.amazonaws.com/themes.json', true);
+    // request.open('GET', '/themes.json', true);
     request.send(null);
     request.onreadystatechange = function () {
         if (request.readyState === 4 && request.status === 200) {
             const theme_data = JSON.parse(request.responseText);
             console.log(Object.keys(theme_data));
 
-            theme = theme_data['synth-midnight-dark'];
+            // theme = theme_data['synth-midnight-dark'];
             // theme = theme_data['black-metal-bathory'];
 
             const themePopup = document.getElementById('themePopup');
@@ -140,7 +141,6 @@ function initializeThemes(){
             });
 
 
-            applyTheme(theme);
             resizeCanvas(canvas);
         }
     }
@@ -294,7 +294,7 @@ function resizeCanvas(canvas) {
         const SPEED = 0.5 * -deltaY;
 
 
-        if (deltaY < 0) { // Zooming in
+        if (deltaY < 0 && viewWidth > 2 && viewHeight > 2) { // Zooming in
 
             let currViewRatio = viewWidth/viewHeight;
 
@@ -366,12 +366,18 @@ function resizeCanvas(canvas) {
     
             let nextWidth = nextTopRight.x - nextTopLeft.x;
             let nextHeight = nextBottomLeft.y - nextTopLeft.y;
+
+            if (nextWidth > 10 && nextHeight > 10) {
+                viewX = nextTopLeft.x;
+                viewY = nextTopLeft.y;
+                viewWidth = nextWidth;
+                viewHeight = nextHeight;
+                document.body.style.cursor = 'zoom-in';
+            } else {
+                document.body.style.cursor = 'zoom-in';
+
+            }
     
-            viewX = nextTopLeft.x;
-            viewY = nextTopLeft.y;
-            viewWidth = nextWidth;
-            viewHeight = nextHeight;
-            document.body.style.cursor = 'zoom-in';
 
         } else { // zooming out
             document.body.style.cursor = 'zoom-out';
@@ -439,9 +445,8 @@ function resizeCanvas(canvas) {
 
 function draw(golUniverse, viewX, viewY, viewWidth, viewHeight) {
 
-    const bg_color = document.body.style.getPropertyValue('--base00');
-    const cell_color = document.body.style.getPropertyValue('--base05');
-    // const cell_color = theme ? theme.base05 : 'black';
+    const bg_color = getComputedStyle(document.body).getPropertyValue('--base00');
+    const cell_color = getComputedStyle(document.body).getPropertyValue('--base05');
 
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
@@ -452,14 +457,8 @@ function draw(golUniverse, viewX, viewY, viewWidth, viewHeight) {
     let screenWidth = canvas.width;
     let screenHeight = canvas.height;
 
-    // windowXElem.innerText = viewX.toFixed(2);
-    // windowYElem.innerText = viewY.toFixed(2);
-
     updateNumericElem(windowXElem, viewX);
     updateNumericElem(windowYElem, viewY);
-
-    // windowHeightElem.innerText = viewHeight.toFixed(2);
-    // windowWidthElem.innerText = viewWidth.toFixed(2);
 
     updateNumericElem(windowWidthElem, viewWidth);
     updateNumericElem(windowHeightElem, viewHeight);
@@ -620,8 +619,8 @@ const canvasElem = document.getElementById('canvas');
 var resizeTimed;
 window.onresize = () => {
     clearTimeout(resizeTimed);
-    resizeTimed = setTimeout(() => {resizeCanvas(canvasElem)}, 100);
+    resizeTimed = setTimeout(() => {resizeCanvas(canvasElem)}, 150);
 };
 // resizeCanvas(canvasElem);
-// window.onload = resizeCanvas(canvasElem);
+// window.onload = () => {resizeCanvas(canvasElem)};
 // loop();

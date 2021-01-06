@@ -24,12 +24,14 @@
             flex: 1;
             font-family: serif;
 
-            --base00: red;
-            --base01: red;
+            --base00: #0A0A0A;
+            --base01: #051124;
             --base02: red;
-            --base03: red;
-            --base04: red;
-            --base05: red;
+            --base03: #1C211E;
+            --base04: #FFFFEB;
+            --base05: #FFFFFA;
+            --base08: #EE964B;
+            --base0B: #87BCDE;
 
             background-color: var(--base00);
             color: var(--base05);
@@ -126,7 +128,7 @@
             max-width: 400px;
             text-align: left;
             background-color: var(--base01);
-            color: var(--base05);
+            color: var(--base04);
             flex: 1;
             display: flex;
             flex-direction: column;
@@ -203,9 +205,9 @@
             background-color: var(--base03);
         }
 
-        .listEntry h3 {
+        h3 {
             font-size: 16px;
-            font-weight: 600;
+            font-weight: 700;
             padding: 0;
             margin: 0;
         }
@@ -214,8 +216,15 @@
             text-align: left;
         }
 
+        tr {
+            margin: 0;
+            padding: 0;
+        }
+
         td {
             white-space: nowrap;
+            padding: 0;
+            margin: 0;
         }
     </style>
 </head>
@@ -276,6 +285,8 @@
                     </td>
                 </tr>
             </table>
+            <br>
+            <h3>Patterns:</h3>
             <div id="patternList" class="patternList"></div>
             <input type="file" id="file-input" />
         </div>
