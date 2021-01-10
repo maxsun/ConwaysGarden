@@ -80,6 +80,14 @@ function initSidebar() {
         {
             title: 'UTM',
             source: 'https://conwaysgarden.s3-us-west-2.amazonaws.com/patterns/utm.rle'
+        },
+        {
+            title: 'Big UTM',
+            source: 'https://conwaysgarden.s3-us-west-2.amazonaws.com/patterns/universalturingmachine.rle'
+        },
+        {
+            title: 'Star Gate Example',
+            source: 'https://conwaysgarden.s3-us-west-2.amazonaws.com/patterns/stargatewithlightweightspaceships.rle'
         }
     ];
     let sidebarList = document.getElementById('patternList');

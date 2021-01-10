@@ -207,12 +207,12 @@ impl Universe {
         let mut bits = vec![];
         let mut steps_count = steps;
         // while steps_count > 0 {
-        bits.push(steps_count & 1);
-        steps_count = steps_count >> 1;
-        let root_dim = 2i32.pow(tid.fetch_from(&self.space).level() as u32);
-        tid = self.space.expand_tree(tid);
-        self.rootX -= root_dim / 2;
-        self.rootY -= root_dim / 2;
+        //     bits.push(steps_count & 1);
+        //     steps_count = steps_count >> 1;
+        //     let root_dim = 2i32.pow(tid.fetch_from(&self.space).level() as u32);
+        //     tid = self.space.expand_tree(tid);
+        //     self.rootX -= root_dim / 2;
+        //     self.rootY -= root_dim / 2;
         // }
         // self.center(0);
 
