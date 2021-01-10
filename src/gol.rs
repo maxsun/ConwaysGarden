@@ -2,6 +2,7 @@ use bimap::BiMap;
 use std::hash::{Hash, Hasher};
 use std::fs::File;
 use std::time::Instant;
+use std::cmp;
 
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -77,9 +78,9 @@ impl QTree {
         }
     }
 
-    pub(crate) fn level(&self) -> u32 {
+    pub(crate) fn level(&self) -> usize {
         match *self {
-            QTree::Node(ref i) => i.level as u32,
+            QTree::Node(ref i) => i.level,
             QTree::Leaf(_) => 0,
         }
     }
@@ -339,7 +340,36 @@ impl Space {
         self.new_node(nw, ne, sw, se)
     }
 
-    pub fn evolve_tree(&mut self, tree_id: ID) -> ID {
+    fn horizontalForward(&mut self, node_w: ID, node_e: ID, j: usize) -> ID {
+        let x = self.new_node(
+            node_w.fetch_node(self).north_east,
+            node_e.fetch_node(self).north_west,
+            node_w.fetch_node(self).south_east,
+            node_e.fetch_node(self).south_west,
+        );
+        return self.evolve_tree(x, j)
+    }
+    fn verticalForward(&mut self, node_n: ID, node_s: ID, j: usize) -> ID {
+        let x = self.new_node(
+            node_n.fetch_node(self).south_west,
+            node_n.fetch_node(self).south_east,
+            node_s.fetch_node(self).north_west,
+            node_s.fetch_node(self).north_east,
+        );
+        return self.evolve_tree(x, j)
+    }
+    fn centeredForward(&mut self, node: ID, j: usize) -> ID {
+        let n = node.fetch_node(self);
+        let x = self.new_node(
+            n.north_west.fetch_node(self).south_east,
+            n.north_east.fetch_node(self).south_west,
+            n.south_west.fetch_node(self).north_east,
+            n.south_east.fetch_node(self).north_west,
+        );
+        return self.evolve_tree(x, j)
+    }
+
+    pub fn evolve_tree(&mut self, tree_id: ID, j: usize) -> ID {
         {
             let inode = tree_id.fetch_node(self);
             debug_assert!(inode.level >= 2, "must be level 2 or higher");
@@ -353,32 +383,58 @@ impl Space {
             self.evolve4x4(tree_id)
         } else {
 
+            let n = tree_id.fetch_node(self);
+            let curr_level = n.level;
+            let next_j = cmp::min(j, n.level - 2);
+
             let (tree_nw, tree_ne, tree_sw, tree_se) = {
-                let n = tree_id.fetch_node(self);
                 (n.north_west, n.north_east, n.south_west, n.south_east)
             };
             
-            let n00 = self.centered_sub(tree_nw);
-            let n01 = self.centered_horizontal(tree_nw, tree_ne);
-            let n02 = self.centered_sub(tree_ne);
-            let n10 = self.centered_vertical(tree_nw, tree_sw);
-            let n11 = self.centered_subsub(tree_id);
-            let n12 = self.centered_vertical(tree_ne, tree_se);
-            let n20 = self.centered_sub(tree_sw);
-            let n21 = self.centered_horizontal(tree_sw, tree_se);
-            let n22 = self.centered_sub(tree_se);
+            let n00 = self.evolve_tree(tree_nw, next_j);
+            let n01 = self.horizontalForward(tree_nw, tree_ne, next_j);
+            let n02 = self.evolve_tree(tree_ne, next_j);
+            let n10 = self.verticalForward(tree_nw, tree_sw, next_j);
+            let n11 = self.centeredForward(tree_id, next_j);
+            let n12 = self.verticalForward(tree_ne, tree_se, next_j);
+            let n20 = self.evolve_tree(tree_sw, next_j);
+            let n21 = self.horizontalForward(tree_sw, tree_se, next_j);
+            let n22 = self.evolve_tree(tree_se, next_j);
+
+            // let n00 = self.centered_sub(tree_nw);
+            // let n01 = self.centered_horizontal(tree_nw, tree_ne);
+            // let n02 = self.centered_sub(tree_ne);
+            // let n10 = self.centered_vertical(tree_nw, tree_sw);
+            // let n11 = self.centered_subsub(tree_id);
+            // let n12 = self.centered_vertical(tree_ne, tree_se);
+            // let n20 = self.centered_sub(tree_sw);
+            // let n21 = self.centered_horizontal(tree_sw, tree_se);
+            // let n22 = self.centered_sub(tree_se);
 
             let (nw, ne, sw, se) = {
-                let nw = self.new_node(n00, n01, n10, n11);
-                let ne = self.new_node(n01, n02, n11, n12);
-                let sw = self.new_node(n10, n11, n20, n21);
-                let se = self.new_node(n11, n12, n21, n22);
-                (
-                    self.evolve_tree(nw),
-                    self.evolve_tree(ne),
-                    self.evolve_tree(sw),
-                    self.evolve_tree(se),
-                )
+                if j < curr_level - 2 {
+                    let nw = self.new_node(n00, n01, n10, n11);
+                    let ne = self.new_node(n01, n02, n11, n12);
+                    let sw = self.new_node(n10, n11, n20, n21);
+                    let se = self.new_node(n11, n12, n21, n22);
+                    (
+                        self.centered_sub(nw),
+                        self.centered_sub(ne),
+                        self.centered_sub(sw),
+                        self.centered_sub(se),
+                    )
+                } else {
+                    let nw = self.new_node(n00, n01, n10, n11);
+                    let ne = self.new_node(n01, n02, n11, n12);
+                    let sw = self.new_node(n10, n11, n20, n21);
+                    let se = self.new_node(n11, n12, n21, n22);
+                    (
+                        self.evolve_tree(nw, j),
+                        self.evolve_tree(ne, j),
+                        self.evolve_tree(sw, j),
+                        self.evolve_tree(se, j),
+                    )
+                }
             };
 
             let result = self.new_node(nw, ne, sw, se);
@@ -419,67 +475,6 @@ impl Space {
             result
         }
     }
-
-    // pub fn advance(&mut self, steps: usize) {
-    //     let mut tid = self.root.unwrap();
-    //     loop {
-    //         let tree = tid.fetch_node(self);
-    //         // let iroot = self.root.unwrap().inode(self);
-    //         let (nw_pop, ne_pop, sw_pop, se_pop) = (
-    //             tree.north_west.fetch_from(self).population(),
-    //             tree.north_east.fetch_from(self).population(),
-    //             tree.south_west.fetch_from(self).population(),
-    //             tree.south_east.fetch_from(self).population(),
-    //         );
-
-    //         let (nw_inner_pop, ne_inner_pop, sw_inner_pop, se_inner_pop) = (
-    //             tree
-    //                 .north_west
-    //                 .fetch_node(self)
-    //                 .south_east
-    //                 .fetch_node(self)
-    //                 .south_east
-    //                 .fetch_from(self)
-    //                 .population(),
-    //             tree
-    //                 .north_east
-    //                 .fetch_node(self)
-    //                 .south_west
-    //                 .fetch_node(self)
-    //                 .south_west
-    //                 .fetch_from(self)
-    //                 .population(),
-    //             tree
-    //                 .south_west
-    //                 .fetch_node(self)
-    //                 .north_east
-    //                 .fetch_node(self)
-    //                 .north_east
-    //                 .fetch_from(self)
-    //                 .population(),
-    //             tree
-    //                 .south_east
-    //                 .fetch_node(self)
-    //                 .north_west
-    //                 .fetch_node(self)
-    //                 .north_west
-    //                 .fetch_from(self)
-    //                 .population(),
-    //         );
-
-    //         if tid.fetch_node(self).level >= 3
-    //             && nw_pop == nw_inner_pop
-    //             && ne_pop == ne_inner_pop
-    //             && sw_pop == sw_inner_pop
-    //             && se_pop == se_inner_pop
-    //         {
-    //             break;
-    //         }
-    //         // println!("Expanding!");
-    //         tid = self.expand_tree(tid);
-    //     }
-    //     self.root = Some(self.evolve_tree(tid))
-    // }
 
     fn evolve4x4(&mut self, node_id: ID) -> ID {
         let inode = node_id.fetch_node(self);

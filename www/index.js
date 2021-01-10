@@ -6,6 +6,13 @@ const mouseYElem = document.getElementById('mouseY');
 const windowXElem = document.getElementById('windowX');
 const windowYElem = document.getElementById('windowY');
 
+const fpsCounterElem = document.getElementById('fpsCounter');
+const ipsCounterElem = document.getElementById('ipsCounter');
+
+const fpsInput = document.getElementById('fpsInput');
+const ipsInput = document.getElementById('ipsInput');
+const iterationStepInput = document.getElementById('iterationStepInput');
+
 const windowWidthElem = document.getElementById('windowWidth');
 const windowHeightElem = document.getElementById('windowHeight');
 
@@ -18,8 +25,8 @@ var lastMousePos = null;
 
 var viewX = 0;
 var viewY = 0;
-var viewWidth = 50;
-var viewHeight = 50;
+var viewWidth = 20;
+var viewHeight = 20;
 
 var cellWidth = 1;
 var cellHeight = 1;
@@ -119,11 +126,6 @@ function initializeThemes(){
     request.onreadystatechange = function () {
         if (request.readyState === 4 && request.status === 200) {
             const theme_data = JSON.parse(request.responseText);
-            console.log(Object.keys(theme_data));
-
-            // theme = theme_data['synth-midnight-dark'];
-            // theme = theme_data['black-metal-bathory'];
-
             const themePopup = document.getElementById('themePopup');
 
             Object.keys(theme_data).forEach((theme_name) => {
@@ -140,13 +142,10 @@ function initializeThemes(){
                 themePopup.appendChild(popupLI);
             });
 
-
             resizeCanvas(canvas);
         }
     }
 }
-initSidebar();
-initializeThemes();
 
 
 function updateNumericElem(node, new_value) {
@@ -170,6 +169,15 @@ function updateNumericElem(node, new_value) {
     }, 250);
 }
 
+function pack_coords(coords_list) {
+    let results = [];
+    for (let i = 0; i < coords_list.length; i += 1) {
+        results.push(coords_list[i].x);
+        results.push(coords_list[i].y);
+    }
+    // console.log(results.length)
+    return results;
+}
 function unpack_coords(coords_list) {
     let results = [];
     for (let i = 0; i < coords_list.length; i += 2) {
@@ -218,8 +226,13 @@ function resizeCanvas(canvas) {
     let width = canvasContainer.clientWidth - (2 * canvasMargin);
     let height = canvasContainer.clientHeight - (2 * canvasMargin);
 
-    viewWidth = width / 10;
-    viewHeight = height / 10;
+    let viewRatio = width/height;
+
+    // viewWidth = viewWidth * 1/viewRatio;
+    // if (viewWidth/viewHeight !== width/height) {
+        viewWidth = width/10;
+        viewHeight = height/10;
+    // }
     // let width = dim;
     // let height = dim;
 
@@ -288,115 +301,36 @@ function resizeCanvas(canvas) {
         mouseXElem.innerText = relativePos.x.toFixed(2);
         mouseYElem.innerText = relativePos.y.toFixed(2);
 
-        // let absMousePos = getAbsoluteCursorPosition(canvas, event);
-        let relMousePos = getRelativeCursorPos(absMousePos)
+        // let relMousePos = getRelativeCursorPos(absMousePos)
+
+        const currViewRatio = viewWidth/viewHeight;
+        const minWidth = 10 * currViewRatio;
+        const minHeight = 10;
+
+        if (deltaY < 0 && (viewWidth <= minWidth || viewHeight <= minHeight)) {
+            deltaY = 0;
+        }
+
+        const SPEED = 0.1 * -deltaY;
+        let mx = (absMousePos.x / canvas.width*dpr);
+        let my = (absMousePos.y / canvas.height*dpr);
+
+        let widthDelta = 0.5 * currViewRatio * Math.min(deltaY, 100);
+        let heightDelta = 0.5 * Math.min(deltaY, 100);
+
+        let nextWidth = Math.max(viewWidth + widthDelta, minWidth);
+        let nextHeight = Math.max(viewHeight + heightDelta, minHeight);
         
-        const SPEED = 0.5 * -deltaY;
+        viewX -= mx * (nextWidth - viewWidth);
+        viewY -= my * (nextHeight - viewHeight);
+ 
+        viewWidth = nextWidth;
+        viewHeight = nextHeight;
 
-
-        if (deltaY < 0 && viewWidth > 2 && viewHeight > 2) { // Zooming in
-
-            let currViewRatio = viewWidth/viewHeight;
-
-            let targetZoomWidth = 2 * currViewRatio;
-            let targetZoomHeight = 2;
-
-            let targetViewX = relMousePos.x - targetZoomWidth/2;
-            let targetViewY = relMousePos.y - targetZoomHeight/2;
-    
-            let currTopLeft = {x: viewX, y: viewY};
-            let currTopRight = {x: viewX + viewWidth, y: viewY};
-            let currBottomLeft = {x: viewX, y: viewY + viewHeight};
-            let currBottomRight = {x: viewX + viewWidth, y: viewY + viewHeight};
-    
-            let targetTopLeft = {x: targetViewX, y: targetViewY};
-            let targetTopRight = {x: targetViewX + targetZoomWidth, y: targetViewX};
-            let targetBottomLeft = {x: targetViewX, y: targetViewY + targetZoomHeight};
-            let targetBottomRight = {x: targetViewX + targetZoomWidth, y: targetViewY + targetZoomHeight};
-    
-            function normalizeVecs(vectors) {
-                let magnitudes = vectors.map(vec => Math.sqrt(Math.pow(vec.x, 2) + Math.pow(vec.y, 2)));
-                let max_mag = Math.max(...magnitudes);
-                return vectors.map(vec =>  {return {
-                    x: vec.x / max_mag,
-                    y: vec.y / max_mag,
-                }});
-            }
-
-            let topLeftVec = {
-                x: targetTopLeft.x - currTopLeft.x,
-                y: targetTopLeft.y - currTopLeft.y
-            };
-            let topRightVec = {
-                x: targetTopRight.x - currTopRight.x,
-                y: targetTopRight.y - currTopRight.y
-            };
-            let bottomLeftVec = {
-                x: targetBottomLeft.x - currBottomLeft.x,
-                y: targetBottomLeft.y - currBottomLeft.y
-            };
-            let bottomRightVec = {
-                x: targetBottomRight.x - currBottomRight.x,
-                y: targetBottomRight.y - currBottomRight.y
-            };
-
-            let normalized = normalizeVecs([topLeftVec, topRightVec, bottomLeftVec, bottomRightVec]);
-            topLeftVec = normalized[0];
-            topRightVec = normalized[1];
-            bottomLeftVec = normalized[3];
-            bottomRightVec = normalized[2];
-    
-            
-            let nextTopLeft = {
-                x: currTopLeft.x += topLeftVec.x * SPEED,
-                y: currTopLeft.y += topLeftVec.y * SPEED,
-            };
-            let nextTopRight = {
-                x: currTopRight.x += topRightVec.x * SPEED,
-                y: currTopRight.y += topRightVec.y * SPEED,
-            };
-            let nextBottomLeft = {
-                x: currBottomLeft.x += bottomLeftVec.x * SPEED,
-                y: currBottomLeft.y += bottomLeftVec.y * SPEED,
-            };
-            let nextBottomRight = {
-                x: currBottomRight.x += bottomRightVec.x * SPEED,
-                y: currBottomRight.y += bottomRightVec.y * SPEED,
-            };
-    
-            let nextWidth = nextTopRight.x - nextTopLeft.x;
-            let nextHeight = nextBottomLeft.y - nextTopLeft.y;
-
-            if (nextWidth > 10 && nextHeight > 10) {
-                viewX = nextTopLeft.x;
-                viewY = nextTopLeft.y;
-                viewWidth = nextWidth;
-                viewHeight = nextHeight;
-                document.body.style.cursor = 'zoom-in';
-            } else {
-                document.body.style.cursor = 'zoom-in';
-
-            }
-    
-
-        } else { // zooming out
+        if (deltaY < 0) {
+            document.body.style.cursor = 'zoom-in';
+        } else if (deltaY > 0) {
             document.body.style.cursor = 'zoom-out';
-
-            let mx = (absMousePos.x / canvas.width*dpr);
-            let my = (absMousePos.y / canvas.height*dpr);
-
-            let currViewRatio = viewWidth/viewHeight;
-            let widthDelta = 0.5 * currViewRatio * Math.min(deltaY, 100);
-            let heightDelta = 0.5 * Math.min(deltaY, 100);
-
-            let nextWidth = viewWidth + widthDelta;
-            let nextHeight = viewHeight + heightDelta;
-    
-            viewWidth = nextWidth;
-            viewHeight = nextHeight;
-            viewX -= mx * widthDelta;
-            viewY -= my * heightDelta;
-
         }
         
         window.clearTimeout(isScrolling);
@@ -404,7 +338,7 @@ function resizeCanvas(canvas) {
             console.log('done scrolling');
             document.body.style.cursor = 'auto';
             isScrolling = null;
-        }, 250);
+        }, 100);
 
     }
 
@@ -414,11 +348,12 @@ function resizeCanvas(canvas) {
                 e.touches[0].pageX - e.touches[1].pageX,
                 e.touches[0].pageY - e.touches[1].pageY);
             let deltaDist = lastTouchScaleDist - currTouchDist;
+            let scaleAmount = (viewWidth/5) * (deltaDist / Math.min(parseInt(canvas.style.width), parseInt(canvas.style.height)));
             let midpoint = {
                 x: (e.touches[0].pageX + e.touches[1].pageX) / 2,
                 y: (e.touches[0].pageY + e.touches[1].pageY) / 2,
             };
-            handleZoom(midpoint, 5 * deltaDist/(parseInt(canvas.style.width, 10) / 4));
+            handleZoom(midpoint, scaleAmount);
 
         } else if (isMouseDown) {
             let currMousePos = getAbsoluteCursorPosition(canvas, e.touches[0]);
@@ -443,7 +378,8 @@ function resizeCanvas(canvas) {
     canvas.addEventListener('wheel', handleMouseWheel, false);
 }
 
-function draw(golUniverse, viewX, viewY, viewWidth, viewHeight) {
+
+function draw(coords, viewX, viewY, viewWidth, viewHeight) {
 
     const bg_color = getComputedStyle(document.body).getPropertyValue('--base00');
     const cell_color = getComputedStyle(document.body).getPropertyValue('--base05');
@@ -467,27 +403,108 @@ function draw(golUniverse, viewX, viewY, viewWidth, viewHeight) {
     cellWidth = screenWidth / viewWidth / dpr;
     cellHeight = screenHeight / viewHeight / dpr;
 
+    // console.log(cellWidth, cellHeight);
+
     ctx.fillStyle = cell_color;
 
-    let coords = unpack_coords(golUniverse.coords(viewX, viewY, viewX + viewWidth, viewY + viewHeight));
     coords.forEach(coord => {
         let x_adj = (coord.x - viewX) * cellWidth;
         let y_adj =  (coord.y - viewY) * cellHeight;
         ctx.fillRect(x_adj, y_adj, cellWidth, cellHeight);
-
     });
+
+    function findPattern(target, coords) {
+        let cmap = {};
+        coords.forEach(c => {
+            cmap[[c.x, c.y]] = true;
+        });
+        
+        coords.forEach(c => {
+            let matches = true;
+            for (let i = 0; i < target.length; i++) {
+                if (cmap[[c.x + target[i].x, c.y + target[i].y]] !== true) {
+                    matches = false;
+                    break;
+                }
+            }
+            if (matches) {
+                ctx.strokeStyle = "red";
+                ctx.beginPath();
+                let x_adj = (c.x - viewX) * cellWidth;
+                let y_adj =  (c.y - viewY) * cellHeight;
+                ctx.rect(x_adj, y_adj, 3 * cellWidth, 3 * cellHeight);
+                ctx.stroke();
+            }
+        });
+    }
+
+    let block_pat = [
+        {x: 0, y: 0},
+        {x: 1, y: 0},
+        {x: 2, y: 0},
+        {x: 2, y: 1},
+        {x: 1, y: 2},
+    ];
+
 }
 
-function loop() {
-    const fps = 30;
+var frameCounter = 0;
+var iterationCounter = 0;
 
-    // Begin recursive loop
-    setTimeout(loop, 1000 / (fps));
+var last_poll_time = undefined;
+
+function statsLoop() {
+    const polling_time = 3;
+    setTimeout(statsLoop, 1000 * polling_time);
     window.requestAnimationFrame(_ => {
-        draw(uni, viewX, viewY, viewWidth, viewHeight);
-        uni.advance(1);
+        if (last_poll_time !== undefined) {
+            let timeDelta = performance.now() - last_poll_time;
+            let measuredFrameRate = frameCounter * 1000 / timeDelta;
+            let measuredIterationRate = iterationCounter * 1000 / timeDelta;
+            updateNumericElem(fpsCounterElem, measuredFrameRate);
+            updateNumericElem(ipsCounterElem, measuredIterationRate);
+            frameCounter = 0;
+            iterationCounter = 0;
+        }
+        last_poll_time = performance.now();
     });
 }
+
+
+function universeLoop() {
+    let targetIts = parseInt(ipsInput.value);
+    let targetItStep = parseInt(iterationStepInput.value)
+    console.log(targetItStep);
+    const its = targetIts;
+    const step_size = targetItStep;
+
+    setTimeout(universeLoop, 1000 / (its));
+    window.requestAnimationFrame(_ => {
+        uni.advance(step_size);
+        iterationCounter += step_size;
+    });
+}
+
+
+function drawLoop() {
+    let targetFPS = parseInt(fpsInput.value);
+
+    const fps = targetFPS;
+    // Begin recursive loop
+    setTimeout(drawLoop, 1000 / (fps));
+    window.requestAnimationFrame(_ => {
+        let currWindow = {
+            viewX: viewX,
+            viewY: viewY,
+            viewWidth: viewWidth,
+            viewHeight: viewHeight
+        };
+        let coords = unpack_coords(uni.coords(viewX, viewY, viewX + viewWidth, viewY + viewHeight));
+        draw(coords, viewX, viewY, viewWidth, viewHeight);
+        frameCounter += 1;
+    });
+}
+
 
 function parseRle(text) {
     let rows = text.split('\n');
@@ -549,19 +566,22 @@ function parseRle(text) {
 
 }
 
-var uni = Universe.new(0, 0);
 
 let fileInputElem = document.getElementById('file-input');
 fileInputElem.addEventListener('change', (event) => {
     const file = event.target.files[0];
     let fReader = new FileReader();
     fReader.onload = function() {
-        let coords = parseRle(fReader.result);
-        coords.forEach(coord => {
+        let patternData = parseRle(fReader.result);
+        console.log('Parsed RLE:', patternData);
+        patternData.coords.forEach(coord => {
             uni.set(coord.x, coord.y);
         });
+        // let pc = pack_coords(patternData.coords);
+        console.log('got pc')
+        // uni.set_bulk(pc);
         console.log('starting render loop');
-        loop();
+        universeLoop();
     }
     fReader.readAsText(file);
 });
@@ -569,23 +589,22 @@ fileInputElem.addEventListener('change', (event) => {
 function loadPatternFromUrl(url){
     // read text from URL location
     var request = new XMLHttpRequest();
-    // request.open('GET', 'https://conwaysgarden.s3-us-west-2.amazonaws.com/patterns/utm.rle', true);
     request.open('GET', url, true);
     request.send(null);
     request.onreadystatechange = function () {
         if (request.readyState === 4 && request.status === 200) {
             var type = request.getResponseHeader('Content-Type');
             if (type.indexOf("text") !== 1) {
-                console.log(request.responseText);
                 let patternData = parseRle(request.responseText);
-                // console.log(patternData.width, patternData.height)
-                viewX = patternData.width / 2;
-                viewY = patternData.height / 2;
+                
+                let dim = Math.max(patternData.width, patternData.height) * 2;
+                console.log(patternData);
+
                 patternData.coords.forEach(coord => {
                     uni.set(coord.x, coord.y);
                 });
                 console.log('starting render loop');
-                loop();
+                universeLoop();
             }
         }
     }
@@ -598,14 +617,11 @@ function loadPatternFromUrl(url){
 
 document.getElementById('sidebarToggle').onclick = toggleSidebar;
 document.getElementById('themeToggle').onclick = toggleThemePopup;
+initSidebar();
+initializeThemes();
 
 
-
-
-// uni.set(1, 1);
-// uni.set(1, 2);
-// uni.set(2, 1);
-// uni.set(2, 2);
+var uni = Universe.new(0, 0);
 
 // uni.set(4, 6);
 // uni.set(5, 6);
@@ -623,4 +639,16 @@ window.onresize = () => {
 };
 // resizeCanvas(canvasElem);
 // window.onload = () => {resizeCanvas(canvasElem)};
-// loop();
+
+// console.log(uni.root_level());
+// console.log(unpack_coords(uni.coords(0, 0, 10, 10)));
+// uni.advance(1);
+// uni.advance(1);
+// uni.advance(1);
+// uni.advance(1);
+// uni.advance(1);
+// console.log(uni.root_level());
+// console.log(unpack_coords(uni.coords(0, 0, 10, 10)));
+drawLoop();
+statsLoop();
+// universeLoop();

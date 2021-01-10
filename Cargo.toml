@@ -28,10 +28,12 @@ wee_alloc = { version = "0.4.5", optional = true }
 bimap = "0.5.3"
 js-sys = "0.3.46"
 stdweb = "0.4.20"
+regex = "1.4.3"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.13"
 
 [profile.release]
 # Tell `rustc` to optimize for small code size.
-opt-level = "s"
+# opt-level = 3
+opt-level = 's'
