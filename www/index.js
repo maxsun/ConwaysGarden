@@ -230,7 +230,7 @@ function resizeCanvas(canvas) {
 
     // To get high DPI, set canvas dims to double its actual size
 
-    let canvasMargin = 10;
+    let canvasMargin = 7;
     let width = canvasContainer.clientWidth - (2 * canvasMargin);
     let height = canvasContainer.clientHeight - (2 * canvasMargin);
 
@@ -238,8 +238,9 @@ function resizeCanvas(canvas) {
 
     // viewWidth = viewWidth * 1/viewRatio;
     // if (viewWidth/viewHeight !== width/height) {
-        viewWidth = width/10;
-        viewHeight = height/10;
+    let d = Math.min(cellWidth, cellHeight);
+    viewWidth = width / d;
+    viewHeight = height / d;
     // }
     // let width = dim;
     // let height = dim;
@@ -390,6 +391,7 @@ function resizeCanvas(canvas) {
 function draw(coords, viewX, viewY, viewWidth, viewHeight) {
 
     const bg_color = getComputedStyle(document.body).getPropertyValue('--base00');
+    // const bg_color = 'rgba(0, 0, 0, 0.25)'
     const cell_color = getComputedStyle(document.body).getPropertyValue('--base05');
 
     const canvas = document.getElementById('canvas');
@@ -411,6 +413,9 @@ function draw(coords, viewX, viewY, viewWidth, viewHeight) {
     cellWidth = screenWidth / viewWidth / dpr;
     cellHeight = screenHeight / viewHeight / dpr;
 
+    // cellWidth = cellWidth * 0.9;
+    // cellHeight= cellHeight * 0.9;
+    
     // console.log(cellWidth, cellHeight);
 
     ctx.fillStyle = cell_color;
@@ -418,7 +423,7 @@ function draw(coords, viewX, viewY, viewWidth, viewHeight) {
     coords.forEach(coord => {
         let x_adj = (coord.x - viewX) * cellWidth;
         let y_adj =  (coord.y - viewY) * cellHeight;
-        ctx.fillRect(x_adj, y_adj, cellWidth, cellHeight);
+        ctx.fillRect(x_adj, y_adj, cellWidth * 0.9, cellHeight * 0.9);
     });
 
     function findPattern(target, coords) {
@@ -482,14 +487,17 @@ function statsLoop() {
 function universeLoop() {
     let targetIts = parseInt(ipsInput.value);
     let targetItStep = parseInt(iterationStepInput.value)
-    console.log(targetItStep);
     const its = targetIts;
-    const step_size = targetItStep;
+    let j = targetItStep;
 
     setTimeout(universeLoop, 1000 / (its));
     window.requestAnimationFrame(_ => {
-        uni.advance(step_size);
-        iterationCounter += step_size;
+        if (targetIts > 0) {
+
+            // advance 2**j generations
+            uni.advance(j);
+            iterationCounter += Math.pow(2, j);
+        }
     });
 }
 

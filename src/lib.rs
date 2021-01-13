@@ -204,32 +204,36 @@ impl Universe {
     pub fn advance(&mut self, steps: usize) {
         self.center(0);
         let mut tid = self.root_id;
-        let mut bits = vec![];
+        // let mut bits = vec![];
         let mut steps_count = steps;
         // while steps_count > 0 {
-        //     bits.push(steps_count & 1);
-        //     steps_count = steps_count >> 1;
-        //     let root_dim = 2i32.pow(tid.fetch_from(&self.space).level() as u32);
-        //     tid = self.space.expand_tree(tid);
-        //     self.rootX -= root_dim / 2;
-        //     self.rootY -= root_dim / 2;
+            // bits.push(steps_count & 1);
+            // steps_count = steps_count >> 1;
+            // let root_dim = 2i32.pow(tid.fetch_from(&self.space).level() as u32);
+            // tid = self.space.expand_tree(tid);
+            // self.rootX -= root_dim / 2;
+            // self.rootY -= root_dim / 2;
         // }
         // self.center(0);
 
-        let mut k = 0;
-        for bit in bits.iter().rev() {
-            let j = bits.len() - k - 1;
-            if *bit != 0 {
-                let rd = 2i32.pow(tid.fetch_from(&self.space).level() as u32 - 1);
-                // self.center(0);
-                // tid = self.space.expand_tree(tid);
-                // self.rootX -= rd/2;
-                // self.rootY -= rd/2;
-                tid = self.space.evolve_tree(tid, steps);
-                self.rootX += rd / 2;
-                self.rootY += rd / 2;
-            }
-        }
+        // let mut k = 0;
+        // for bit in bits.iter().rev() {
+        //     let j = bits.len() - k - 1;
+        //     if *bit != 0 {
+        //         let rd = 2i32.pow(tid.fetch_from(&self.space).level() as u32 - 1);
+        //         // self.center(0);
+        //         // tid = self.space.expand_tree(tid);
+        //         // self.rootX -= rd/2;
+        //         // self.rootY -= rd/2;
+        //         tid = self.space.evolve_tree(tid, steps);
+        //         self.rootX += rd / 2;
+        //         self.rootY += rd / 2;
+        //     }
+        // }
+        let rd = 2i32.pow(tid.fetch_from(&self.space).level() as u32 - 1);
+        tid = self.space.evolve_tree(tid, steps);
+        self.rootX += rd / 2;
+        self.rootY += rd / 2;
         self.root_id = tid
     }
     pub fn root_level(&self) -> usize {

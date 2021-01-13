@@ -5,9 +5,6 @@
     <title>Conway's Garden</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="./all.min.css">
-    <link rel="preconnect" href="https://fonts.gstatic.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com">
-    <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600&display=swap" rel="stylesheet">     <meta charset="utf-8">
     <title>Hello wasm-pack!</title>
     <style>
         body,
@@ -24,14 +21,15 @@
             flex: 1;
             font-family: serif;
 
-            --base00: #0A0A0A;
-            --base01: #051124;
+            --base00: #141414;
+            --base01: #F5F6F4;
             --base02: red;
-            --base03: #1C211E;
-            --base04: #FFFFEB;
+            --base03: #808F85;
+            --base04: #14110F;
             --base05: #FFFFFA;
-            --base08: #EE964B;
-            --base0B: #87BCDE;
+            --base08: red;
+            --base0B: green;
+            --base0E: #044389;
 
             background-color: var(--base00);
             color: var(--base05);
@@ -42,13 +40,13 @@
             padding: 0;
             margin: 0;
             font-weight: 500;
-            font-family: 'Amiri', serif;
+            font-family: 'Georgia', serif;
         }
 
         #header {
             width: 100%;
             display: flex;
-            justify-content: space-around;
+            justify-content: start;
             padding-top: 5px;
         }
 
@@ -57,33 +55,22 @@
             align-self: center;
         }
 
-        #leftButtons {
-            padding-left: 10px;
-            width: 70px;
-            display: flex;
-            justify-content: space-around;
-
-        }
-
-        #rightButtons {
-            width: 70px;
-        }
-
-        #leftButtons button {
+        #header button {
             font-size: 14px;
             background: none;
             border: none;
             color: var(--base03);
             padding: 3px;
-            margin: 0;
+            margin-left: 15px;
         }
 
-        #leftButtons button:hover {
+        #header button:hover {
             cursor: pointer;
         }
 
         #content {
             width: 100%;
+            min-width: 200px;
             height: 100%;
             flex: 1;
             display: flex;
@@ -92,15 +79,10 @@
             justify-content: space-around;
         }
 
-        @media all and (max-width: 600px) {
-            #content {
-                flex-wrap: wrap;
-            }
-        }
-
         #mainContent {
             flex: 3 0 auto;
             min-height: 250px;
+            min-width: 300px;
             text-align: center;
             display: flex;
             flex-direction: column;
@@ -125,7 +107,7 @@
 
         #sidebar {
             min-width: 250px;
-            max-width: 400px;
+            max-width: 300px;
             text-align: left;
             background-color: var(--base01);
             color: var(--base04);
@@ -135,6 +117,19 @@
             overflow: scroll;
             padding: 10px;
             font-size: 16px;
+        }
+
+
+        @media all and (max-width: 600px) {
+            #content {
+                flex-wrap: wrap;
+            }
+
+            #sidebar {
+                /* width: 100%; */
+                max-width: 600px;
+                flex: 1;
+            }
         }
 
         .theme-popup {
@@ -235,12 +230,20 @@
         }
 
         input[type="number"] {
+            outline: none;
             background: none;
-            border-bottom: 'solid 1px';
+            border-top: none;
+            border-left: none;
+            border-right: none;
+            border-width: 1px;
             border-color: var(--base03);
             color: var(--base04);
             font-size: 16px;
             width: 75px;
+            font-family: monospace;
+        }
+        input[type="number"]:focus {
+            border-color: var(--base0E);
         }
     </style>
 </head>
@@ -252,19 +255,13 @@
     <div id="content">
         <div id="mainContent">
             <div id="header">
-                <div id="leftButtons">
-                    <button id="sidebarToggle" value="Sidebar Toggle">
-                        <i class="fa fa-bars"></i> <!-- uses solid style -->
-                    </button>
-                    <button id="themeToggle" value="Theme Toggle">
-                        <i class="fa fa-palette"></i> <!-- uses solid style -->
-                    </button>
-                    <ul id="themePopup" class="theme-popup"></ul>
-                </div>
-                <div id="title">
-                    <h1>Conway's Garden</h1>
-                </div>
-                <div id="rightButtons"></div>
+                <button id="sidebarToggle" value="Sidebar Toggle">
+                    <i class="fa fa-bars"></i> <!-- uses solid style -->
+                </button>
+                <button id="themeToggle" value="Theme Toggle">
+                    <i class="fa fa-palette"></i> <!-- uses solid style -->
+                </button>
+                <ul id="themePopup" class="theme-popup"></ul>
             </div>
             <div id="canvasContainer">
                 <canvas id="canvas"></canvas>
@@ -294,7 +291,7 @@
                         <label for="iterationStepInput">Target Step:</label>
                     </td>
                     <td>
-                        <input id="iterationStepInput" type="number" min="1" max="100" value="1" step="1"></input>
+                        <input id="iterationStepInput" type="number" min="0" max="100" value="1" step="1"></input>
                     </td>
                 </tr>
             </table>

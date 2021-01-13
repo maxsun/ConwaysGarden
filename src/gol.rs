@@ -98,7 +98,7 @@ pub struct Space {
 
 impl Space {
     pub fn new() -> Space {
-        let mut t: BiMap<ID, QTree> = BiMap::new();
+        let t: BiMap<ID, QTree> = BiMap::new();
         Space {
             table: t,
             // root: None
