@@ -37,6 +37,11 @@ impl Universe {
         }
     }
 
+    pub fn population(&mut self) -> usize {
+        let space_tree = self.root_id.fetch_from(&self.space);
+        space_tree.population()
+    }
+
     #[wasm_bindgen]
     pub fn from_rle(&mut self, rle_str: String) {
         let rows = rle_str.split("\n");
@@ -141,6 +146,27 @@ impl Universe {
         results.into_iter().map(JsValue::from).collect()
     }
 
+    pub fn coords_level(&mut self, min_x: i32, min_y: i32, max_x: i32, max_y: i32, level: usize) -> Array {
+        let coords = self.space.get_coords_level(
+            self.root_id,
+            self.rootX,
+            self.rootY,
+            min_x,
+            min_y,
+            max_x,
+            max_y,
+            level
+        );
+        let mut results: Vec<i32> = vec![];
+        for (cx, cy, p) in coords {
+            results.push(cx);
+            results.push(cy);
+            results.push(p as i32);
+        }
+        results.into_iter().map(JsValue::from).collect()
+    }
+
+
     pub fn center(&mut self, n: usize) {
         let mut tid = self.root_id;
         loop {
@@ -204,6 +230,9 @@ impl Universe {
     pub fn advance(&mut self, steps: usize) {
         self.center(0);
         let mut tid = self.root_id;
+        if tid.fetch_from(&self.space).population() == 0usize {
+            return;
+        }
         // let mut bits = vec![];
         let mut steps_count = steps;
         // while steps_count > 0 {

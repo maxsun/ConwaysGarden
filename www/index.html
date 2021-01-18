@@ -68,6 +68,13 @@
             cursor: pointer;
         }
 
+        #header input[type="range"] {
+            color: white;
+            background-color: white;
+            border: solid 1px white;
+            background-color: white;
+        }
+
         #content {
             width: 100%;
             min-width: 200px;
@@ -261,6 +268,7 @@
                 <button id="themeToggle" value="Theme Toggle">
                     <i class="fa fa-palette"></i> <!-- uses solid style -->
                 </button>
+                <input type="range" type="number" min="0" max="100" value="1" class="slider" id="ipsInput">
                 <ul id="themePopup" class="theme-popup"></ul>
             </div>
             <div id="canvasContainer">
@@ -280,15 +288,23 @@
                 </tr>
                 <tr>
                     <td>
+                        <label for="levelInput">View Level:</label>
+                    </td>
+                    <td>
+                        <input id="levelInput" type="number" min="0" max="10" value="0" step="1"></input>
+                    </td>
+                </tr>
+                <!-- <tr>
+                    <td>
                         <label for="ipsInput">Target IPS:</label>
                     </td>
                     <td>
                         <input id="ipsInput" type="number" min="0" max="100" value="10" step="1"></input>
                     </td>
-                </tr>
+                </tr> -->
                 <tr>
                     <td>
-                        <label for="iterationStepInput">Target Step:</label>
+                        <label for="iterationStepInput">J:</label>
                     </td>
                     <td>
                         <input id="iterationStepInput" type="number" min="0" max="100" value="1" step="1"></input>

@@ -244,6 +244,41 @@ impl Space {
         self.new_node(nw, ne, sw, se)
     }
 
+    pub fn get_coords_level(&self, tree_id: ID, xoffset: i32, yoffset: i32, xstart: i32, ystart: i32, xend: i32, yend: i32, target_level: usize) -> Vec<(i32, i32, usize)> {
+        match tree_id.fetch_from(&self) {
+            QTree::Node(Node {
+                pop,
+                level,
+                next: _,
+                north_west,
+                north_east,
+                south_west,
+                south_east,
+            }) => {
+                if target_level == *level {
+                    vec![(xoffset, yoffset, *pop)]
+                }  else if *pop > 0 {
+                    let dim = 2i32.pow(*level as u32 - 1);
+                    let mut results = vec![];
+                    if xoffset > xend || yoffset > yend || xoffset + dim*2 < xstart - 1 || yoffset + dim*2 < ystart - 1 {
+                        return vec![];
+                    }
+
+                    results.append(&mut self.get_coords_level(*north_west, xoffset, yoffset + dim, xstart, ystart, xend, yend, target_level));
+                    results.append(&mut self.get_coords_level(*north_east, xoffset + dim, yoffset + dim, xstart, ystart, xend, yend, target_level));
+                    results.append(&mut self.get_coords_level(*south_west, xoffset, yoffset, xstart, ystart, xend, yend, target_level));
+                    results.append(&mut self.get_coords_level(*south_east, xoffset + dim, yoffset, xstart, ystart, xend, yend, target_level));
+                    results
+                } else {
+                    vec![]
+                }
+            }
+            QTree::Leaf(Leaf(0)) => vec![],
+            QTree::Leaf(_) => vec![(xoffset, yoffset, 1)],
+        }
+    }
+
+
     pub fn get_coords(&self, tree_id: ID, xoffset: i32, yoffset: i32, xstart: i32, ystart: i32, xend: i32, yend: i32) -> Vec<(i32, i32)> {
         match tree_id.fetch_from(&self) {
             QTree::Node(Node {

@@ -12,16 +12,20 @@ const ipsCounterElem = document.getElementById('ipsCounter');
 const fpsInput = document.getElementById('fpsInput');
 const ipsInput = document.getElementById('ipsInput');
 const iterationStepInput = document.getElementById('iterationStepInput');
+const levelInput = document.getElementById('levelInput');
 
 const windowWidthElem = document.getElementById('windowWidth');
 const windowHeightElem = document.getElementById('windowHeight');
 
 
+var leftShiftDown = false;
 var isMouseDown = false;
 var isScrolling = false;
 var touchScaling = false;
 var lastTouchScaleDist = 0;
 var lastMousePos = null;
+var patternOnDeck = null;
+var previousIPS = null; 
 
 var viewX = 0;
 var viewY = 0;
@@ -32,6 +36,26 @@ var cellWidth = 1;
 var cellHeight = 1;
 
 var theme = null;
+
+var uni = Universe.new(0, 0);
+
+
+function matMul(a, b) {
+    var aNumRows = a.length, aNumCols = a[0].length,
+        bNumRows = b.length, bNumCols = b[0].length,
+        m = new Array(aNumRows);  // initialize array of rows
+    for (var r = 0; r < aNumRows; ++r) {
+      m[r] = new Array(bNumCols); // initialize the current row
+      for (var c = 0; c < bNumCols; ++c) {
+        m[r][c] = 0;             // initialize the current cell
+        for (var i = 0; i < aNumCols; ++i) {
+          m[r][c] += a[r][i] * b[i][c];
+        }
+      }
+    }
+    return m;
+}
+
 
 function toggleSidebar() {
     let sidebarNode = document.getElementById('sidebar');
@@ -64,30 +88,48 @@ function toggleThemePopup() {
 }
 
 function initSidebar() {
+    //https://conwaysgarden.s3-us-west-2.amazonaws.com/patterns/
+    let base_pattern_url = 'https://conwaysgarden.com/www/dist/patterns/';
     const patterns = [
         {
             title: 'Glider',
-            source: 'https://conwaysgarden.s3-us-west-2.amazonaws.com/patterns/glider.rle'
+            source: 'glider.rle'
         },
         {
             title: 'Acorn',
-            source: 'https://conwaysgarden.s3-us-west-2.amazonaws.com/patterns/acorn.rle'
+            source: 'acorn.rle'
         },
         {
             title: 'B52 Bomber',
-            source: 'https://conwaysgarden.s3-us-west-2.amazonaws.com/patterns/b52bomber.rle'
+            source: 'b52bomber.rle'
         },
         {
             title: 'UTM',
-            source: 'https://conwaysgarden.s3-us-west-2.amazonaws.com/patterns/utm.rle'
+            source: 'turingmachine.rle'
         },
         {
             title: 'Big UTM',
-            source: 'https://conwaysgarden.s3-us-west-2.amazonaws.com/patterns/universalturingmachine.rle'
+            source: 'universalturingmachine.rle'
         },
         {
             title: 'Star Gate Example',
-            source: 'https://conwaysgarden.s3-us-west-2.amazonaws.com/patterns/stargatewithlightweightspaceships.rle'
+            source: 'stargatewithlightweightspaceships.rle'
+        },
+        {
+            title: 'Gosper Glider Gun',
+            source: 'gosperglidergun.rle'
+        },
+        {
+            title: 'Blinker',
+            source: 'blinker.rle'
+        },
+        {
+            title: 'Block',
+            source: 'block.rle'
+        },
+        {
+            title: 'Eater 1',
+            source: 'eater1.rle'
         }
     ];
     let sidebarList = document.getElementById('patternList');
@@ -99,7 +141,7 @@ function initSidebar() {
         elemTitle.innerText = pat.title;
         listElem.appendChild(elemTitle);
 
-        listElem.dataset.source = pat.source;
+        listElem.dataset.source = base_pattern_url + pat.source;
 
         listElem.onclick = function (e) {
             console.log(this.dataset.source);
@@ -145,6 +187,7 @@ function initializeThemes(){
                 popupLI_button.onclick = function() {
                     applyTheme(theme_data[theme_name]);
                 }
+                applyTheme(theme_data['summerfruit-dark']);
 
                 popupLI.appendChild(popupLI_button);
                 themePopup.appendChild(popupLI);
@@ -190,6 +233,15 @@ function unpack_coords(coords_list) {
     let results = [];
     for (let i = 0; i < coords_list.length; i += 2) {
         results.push({x: coords_list[i], y: coords_list[i + 1]});
+    }
+    // console.log(results.length)
+    return results;
+}
+
+function unpack_level_coords(coords_list) {
+    let results = [];
+    for (let i = 0; i < coords_list.length; i += 3) {
+        results.push({x: coords_list[i], y: coords_list[i + 1], p: coords_list[i + 2]});
     }
     // console.log(results.length)
     return results;
@@ -263,11 +315,33 @@ function resizeCanvas(canvas) {
     canvas.addEventListener('mouseup', function(e) {
         isMouseDown = false;
         document.body.style.cursor = 'auto';
+        if (patternOnDeck) {
+            let transform = patternOnDeck.meta.transform;
+            let t = patternOnDeck.meta.rotation;
+            let rotMat = [
+                [Math.round(Math.cos(t)), Math.round(-Math.sin(t))],
+                [Math.round(Math.sin(t)), Math.round(Math.cos(t))]
+            ];
+            patternOnDeck.data.coords.forEach(coord => {
+                let pos = [
+                    [coord.x],
+                    [coord.y]
+                ];
+                pos = matMul(rotMat, pos);
+                pos = matMul(transform, pos);
+                uni.set(pos[0][0] + patternOnDeck.meta.xoffset, pos[1][0] + patternOnDeck.meta.yoffset);
+                // let x = (pos[0] * transform[0][0]) + (pos[1] * transform[0][1]) + patternOnDeck.meta.xoffset;
+                // let y = (pos[0] * transform[1][0]) + (pos[1] * transform[1][1]) + patternOnDeck.meta.yoffset;
+                // uni.set(x, y);
+            });
+            patternOnDeck = null;
+
+        }
     });
 
     canvas.addEventListener('mousemove', function(e) {
-        let currMousePos = getAbsoluteCursorPosition(canvas, e);
         if (isMouseDown) {
+            let currMousePos = getAbsoluteCursorPosition(canvas, e);
             let deltaX = currMousePos.x - lastMousePos.x;
             let deltaY = currMousePos.y - lastMousePos.y;
             
@@ -275,11 +349,14 @@ function resizeCanvas(canvas) {
             viewY -= deltaY / cellHeight;
             
             lastMousePos = currMousePos;
-            // document.body.style.cursor = 'grab';
             document.body.style.cursor = 'grabbing';
 
         }
         let relativePos = getRelativeCursorPosition(canvas, e);
+        if (patternOnDeck !== null) {
+            patternOnDeck.meta.xoffset = Math.floor(relativePos.x);
+            patternOnDeck.meta.yoffset = Math.floor(relativePos.y);
+        }
         updateNumericElem(mouseXElem, relativePos.x);
         updateNumericElem(mouseYElem, relativePos.y);
 
@@ -379,7 +456,15 @@ function resizeCanvas(canvas) {
 
 
     function handleMouseWheel(event) {
-        handleZoom(getAbsoluteCursorPosition(canvas, event), event.deltaY);
+        if (leftShiftDown) {
+            if (event.deltaY > 0) {
+                levelInput.value = parseFloat(levelInput.value) + 0.1;
+            } else if (event.deltaY < 0) {
+                levelInput.value = Math.max(0, parseFloat(levelInput.value) - 0.1);
+            }
+        } else {
+            handleZoom(getAbsoluteCursorPosition(canvas, event), event.deltaY);
+        }
         event.preventDefault();
     }
 
@@ -388,11 +473,11 @@ function resizeCanvas(canvas) {
 }
 
 
-function draw(coords, viewX, viewY, viewWidth, viewHeight) {
+function draw(coords, viewX, viewY, viewWidth, viewHeight, viewLevel) {
 
-    const bg_color = getComputedStyle(document.body).getPropertyValue('--base00');
-    // const bg_color = 'rgba(0, 0, 0, 0.25)'
-    const cell_color = getComputedStyle(document.body).getPropertyValue('--base05');
+    const bg_color = getComputedStyle(document.body).getPropertyValue('--base00').trim();
+    const cell_color = getComputedStyle(document.body).getPropertyValue('--base0B').trim();
+    const interact_color = getComputedStyle(document.body).getPropertyValue('--base0E').trim();
 
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
@@ -413,18 +498,59 @@ function draw(coords, viewX, viewY, viewWidth, viewHeight) {
     cellWidth = screenWidth / viewWidth / dpr;
     cellHeight = screenHeight / viewHeight / dpr;
 
-    // cellWidth = cellWidth * 0.9;
-    // cellHeight= cellHeight * 0.9;
-    
-    // console.log(cellWidth, cellHeight);
+    // ctx.fillStyle = cell_color;
 
-    ctx.fillStyle = cell_color;
+    function hexToRgb(hex) {
+        // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
+        var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+        hex = hex.replace(shorthandRegex, function(m, r, g, b) {
+          return r + r + g + g + b + b;
+        });
+      
+        var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16)
+        } : null;
+      }
+      
+
+
+    // let draw_level = 4;
+    let scaling_factor = Math.pow(2, viewLevel);
+    let rgb_cc = hexToRgb(cell_color);
 
     coords.forEach(coord => {
         let x_adj = (coord.x - viewX) * cellWidth;
         let y_adj =  (coord.y - viewY) * cellHeight;
-        ctx.fillRect(x_adj, y_adj, cellWidth * 0.9, cellHeight * 0.9);
+        let color_scale_amount = coord.p * 0.9 /(scaling_factor) + 0.1;
+        ctx.fillStyle = `rgba(${rgb_cc.r}, ${rgb_cc.g}, ${rgb_cc.b}, ${color_scale_amount})`;
+        ctx.fillRect(x_adj, y_adj, scaling_factor * cellWidth * 0.9, scaling_factor * cellHeight * 0.9);
     });
+
+
+    let rgb = hexToRgb(interact_color);
+    ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.5)`;
+    
+    let xoffset = 0;
+    let yoffset = 0;
+    if (patternOnDeck) {
+        let transform = patternOnDeck.meta.transform;
+        let t = patternOnDeck.meta.rotation;
+        let rotMat = [
+            [Math.round(Math.cos(t)), Math.round(-Math.sin(t))],
+            [Math.round(Math.sin(t)), Math.round(Math.cos(t))]
+        ];
+        transform = matMul(transform, rotMat);
+        let w = (patternOnDeck.data.width * transform[0][0]) + (patternOnDeck.data.height * transform[0][1]);
+        let h = (patternOnDeck.data.width * transform[1][0]) + (patternOnDeck.data.height * transform[1][1]);
+        let x = cellWidth * (patternOnDeck.meta.xoffset - viewX);
+        let y = cellHeight * (patternOnDeck.meta.yoffset - viewY);
+        
+        ctx.fillRect(x, y, w * cellWidth, h * cellHeight);
+    }
+
 
     function findPattern(target, coords) {
         let cmap = {};
@@ -493,7 +619,8 @@ function universeLoop() {
     setTimeout(universeLoop, 1000 / (its));
     window.requestAnimationFrame(_ => {
         if (targetIts > 0) {
-
+            // let x = uni.population();
+            // console.log(x);
             // advance 2**j generations
             uni.advance(j);
             iterationCounter += Math.pow(2, j);
@@ -515,8 +642,10 @@ function drawLoop() {
             viewWidth: viewWidth,
             viewHeight: viewHeight
         };
-        let coords = unpack_coords(uni.coords(viewX, viewY, viewX + viewWidth, viewY + viewHeight));
-        draw(coords, viewX, viewY, viewWidth, viewHeight);
+        // let coords = unpack_coords(uni.coords(viewX, viewY, viewX + viewWidth, viewY + viewHeight));
+        let k = Math.floor(parseFloat(levelInput.value));
+        let coords = unpack_level_coords(uni.coords_level(viewX, viewY, viewX + viewWidth, viewY + viewHeight, k));
+        draw(coords, viewX, viewY, viewWidth, viewHeight, k);
         frameCounter += 1;
     });
 }
@@ -597,7 +726,7 @@ fileInputElem.addEventListener('change', (event) => {
         console.log('got pc')
         // uni.set_bulk(pc);
         console.log('starting render loop');
-        universeLoop();
+        // universeLoop();
     }
     fReader.readAsText(file);
 });
@@ -616,20 +745,69 @@ function loadPatternFromUrl(url){
                 let dim = Math.max(patternData.width, patternData.height) * 2;
                 console.log(patternData);
 
-                patternData.coords.forEach(coord => {
-                    uni.set(coord.x, coord.y);
-                });
-                console.log('starting render loop');
-                universeLoop();
+                let xoffset = 0;
+                let yoffset = 0;
+                if (lastMousePos) {
+                    let relpos = getRelativeCursorPos(lastMousePos);
+                    xoffset = Math.floor(relpos.x);
+                    yoffset = Math.floor(relpos.y);
+                }
+                // let xoffset = lastMousePos !== null ? lastMousePos.x : 0;
+                // let yoffset = lastMousePos !== null ? lastMousePos.y : 0;
+
+                patternOnDeck = {
+                    meta: {
+                        xoffset: 0,
+                        yoffset: 0,
+                        transform: [
+                            [1, 0],
+                            [0, 1]
+                        ],
+                        rotation: 0,
+                    },
+                    data: patternData
+                };
+                // patternData.coords.forEach(coord => {
+                //     uni.set(-coord.x + xoffset, coord.y + yoffset);
+                // });
+                // console.log('starting render loop');
+                // universeLoop();
             }
         }
     }
 }
 
-// document.getElementById('sidebarToggle').onclick = function(evt) {
-//     console.log('Toggle sidebar');
+document.addEventListener('keydown', (e) => {
+    if (e.code === 'ShiftLeft') {
+        leftShiftDown = true;
+    }
+});
+document.addEventListener('keyup', (e) => {
+    console.log(e.code);
+    if (e.code === 'KeyH' && patternOnDeck !== null) {
+        patternOnDeck.meta.transform = matMul(patternOnDeck.meta.transform, [[-1, 0], [0, 1]]);
+    }
+    if (e.code === 'KeyV' && patternOnDeck !== null) {
+        patternOnDeck.meta.transform = matMul(patternOnDeck.meta.transform, [[1, 0], [0, -1]]);
+    }
+    if (e.code === 'KeyR' && patternOnDeck !== null) {
+        patternOnDeck.meta.rotation = (patternOnDeck.meta.rotation + Math.PI/2) % (2 * Math.PI);
+    }
+    if (e.code === 'Space') {
+        if (ipsInput.value == 0) {
+            ipsInput.value = previousIPS ? previousIPS : 1;
+            console.log(ipsInput.value)
+            previousIPS = 0;
+        } else {
+            previousIPS = ipsInput.value;
+            ipsInput.value = 0;
+        }
+    }
+    if (e.code === 'ShiftLeft') {
+        leftShiftDown = false;
+    }
+});
 
-// };
 
 document.getElementById('sidebarToggle').onclick = toggleSidebar;
 document.getElementById('themeToggle').onclick = toggleThemePopup;
@@ -637,7 +815,6 @@ initSidebar();
 initializeThemes();
 
 
-var uni = Universe.new(0, 0);
 
 // uni.set(4, 6);
 // uni.set(5, 6);
@@ -667,4 +844,4 @@ window.onresize = () => {
 // console.log(unpack_coords(uni.coords(0, 0, 10, 10)));
 drawLoop();
 statsLoop();
-// universeLoop();
+universeLoop();
